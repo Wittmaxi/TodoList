@@ -49,7 +49,7 @@ void testResponse() {
 }
 
 Container generateForm (const std::string& Type) {
-    return Container {StyleAttribute {"margin-bottom: 2em;"}, ClassAttribute{"col-6"},
+    return Container {StyleAttribute {"margin-bottom: 2em;"}, ClassAttribute{"col-sm-12 col-sm-6"},
         H4 {
             ConvenientText {Type}
         },
