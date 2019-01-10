@@ -32,6 +32,14 @@ void saveTasksToFile () {
         tasks_of << i.type << ":" << i.name << "\n";
 }
 
+int countOpenTasks () {
+    int counter = 0;
+    for (auto i : tasks)
+        if (i.type != "done")
+            ++counter;
+    return counter;
+}
+
 void testResponse() {
     if (ENV::POST("task") != "") {
         tasks.push_back(ENV::POST("cathegory") + ":" + ENV::POST("task"));
@@ -41,6 +49,13 @@ void testResponse() {
                 tasks.erase (i);
                 break;
             }
+    } else if (ENV::POST("done") != "") { 
+        for (auto i = tasks.begin(); i != tasks.end(); i++)
+            if (i->name == ENV::POST("done")) {
+                i->name = i->name + " - " + i->type;
+                i->type = "done";
+                break;
+            }
     }
     else
         return;
@@ -48,8 +63,42 @@ void testResponse() {
     saveTasksToFile(); 
 }
 
-Container generateForm (const std::string& Type) {
-    return Container {StyleAttribute {"margin-bottom: 2em;"}, ClassAttribute{"col-sm-12 col-sm-6"},
+template<class... T>
+Container generateRow (T... args) {
+    return Container {ClassAttribute{"row"},
+        args...
+    };
+}
+
+Container generateForm (const std::string& Type, char size, bool forbidControl) {
+    return Container {StyleAttribute {"margin-bottom: 2em;"}, ClassAttribute{"col-sm-12 col-md-" + std::to_string (size)},
+        H4 {
+            ConvenientText {Type}
+        },
+        Table {ClassAttribute{"table table-dark table-striped"},
+            Function {
+                [=]() {
+                for (auto i : tasks) 
+                    if (i.type == Type)
+                        wcpout << Row { 
+                            Cell { 
+                                ConvenientText{i.name}
+                            },
+                            Cell {
+                                Form {FormMethod{"POST"},
+                                    Input {InputType{"hidden"}, InputValue{i.name}, Attribute{"name=\"deletename\""}},
+                                    Input{ClassAttribute {"form-control text-grey btn btn-danger"}, InputType{"submit"}, InputValue{"Delete Task"}}
+                                }
+                            }
+                        };
+                }
+            }
+        },
+    };
+}
+
+Container generateForm (const std::string& Type, char size) {
+    return Container {StyleAttribute {"margin-bottom: 2em;"}, ClassAttribute{"col-lg-12 col-xl-" + std::to_string (size)},
         H4 {
             ConvenientText {Type}
         },
@@ -65,7 +114,13 @@ Container generateForm (const std::string& Type) {
                             Cell {
                                 Form {FormMethod{"POST"},
                                     Input {InputType{"hidden"}, InputValue{i.name}, Attribute{"name=\"deletename\""}},
-                                    Input{ClassAttribute {"form-control text-grey"}, InputType{"submit"}, InputValue{"Delete Task"}}
+                                    Input{ClassAttribute {"form-control text-grey btn btn-danger"}, InputType{"submit"}, InputValue{"Delete Task"}}
+                                }
+                            },
+                            Cell {
+                                Form {FormMethod{"POST"},
+                                    Input {InputType{"hidden"}, InputValue{i.name}, Attribute{"name=\"done\""}},
+                                    Input{ClassAttribute {"form-control text-grey btn btn-success"}, InputType{"submit"}, InputValue{"Done"}}
                                 }
                             }
                         };
@@ -99,18 +154,35 @@ int main()
         },
         Body{ClassAttribute{"bg-dark text-white"},
             H5 {ClassAttribute{"alert alert-info"},
-                ConvenientText ("You currently have " + std::to_string(tasks.size()) + " Tasks open!")
+                ConvenientText ("You currently have " + std::to_string(countOpenTasks()) + " Tasks open!")
             },
-            Break,
-            HorizontalLine{},
-            Break,
-            Container {ClassAttribute ("row"),
-                generateForm("Important/Pressing"),
-                generateForm("Important/Nonpressing"),
-                generateForm("Unimportant/Pressing"),
-                generateForm("Unimportant/Nonpressing"),
-                generateForm("Other"),
-                generateForm("School/Work")
+            Container {
+                generateForm("Today", 12),
+                HorizontalLine{},
+                generateRow(
+                    generateForm("Important/Pressing", 6),
+                    generateForm("Important/Nonpressing", 6)
+                ),
+                Break,
+                HorizontalLine{},
+                generateRow(
+                    generateForm("Unimportant/Pressing", 6),
+                    generateForm("Unimportant/Nonpressing", 6)
+                ),
+                Break,
+                generateRow(
+                    generateForm("Other", 6),
+                    generateForm("School/Work", 6)
+                ),
+                Break,
+                generateRow(
+                    generateForm("reading", 3),
+                    generateForm("learning", 3), 
+                    generateForm("notes", 3), 
+                    generateForm("bucketlist", 3)
+                ), 
+                Break,
+                generateForm("done", 12, true)
             }
         }
     };
